@@ -1,5 +1,7 @@
 # Dehype for Twitter / X
 
+![Dehype for X poster: Less hype. More signal. Turn hyped posts into plain language.](docs/assets/dehype-poster.png)
+
 A cross-browser extension (for **Google Chrome** and **Mozilla Firefox**) that replaces hyped Twitter/X post content with a clean, dehyped version generated via AI workflow.
 
 ---
