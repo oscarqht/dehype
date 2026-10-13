@@ -4,7 +4,8 @@
   "description": "Browser extension to replace Twitter/X hyped posts with dehyped versions.",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types scripts/test.mjs"
   },
   "keywords": [
     "twitter",
