@@ -1,0 +1,135 @@
+:root {
+  --bg-color: #0f1419;
+  --card-bg: #16181c;
+  --border-color: #2f3336;
+  --text-main: #e7e9ea;
+  --text-secondary: #71767b;
+  --primary: #1d9bf0;
+  --primary-hover: #1a8cd8;
+  --success: #00ba7c;
+  --danger: #f4212e;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-color: #ffffff;
+    --card-bg: #f7f9f9;
+    --border-color: #eff3f4;
+    --text-main: #0f1419;
+    --text-secondary: #536471;
+    --primary: #1d9bf0;
+    --primary-hover: #1a8cd8;
+    --success: #00ba7c;
+    --danger: #f4212e;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  width: 320px;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  padding: 16px;
+  font-size: 13px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1d9bf0 0%, #00ba7c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 16px;
+}
+
+h1 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.status-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.status-row:last-child {
+  margin-bottom: 0;
+}
+
+.status-label {
+  color: var(--text-secondary);
+}
+
+.status-value {
+  font-weight: 600;
+}
+
+.status-value.ok {
+  color: var(--success);
+}
+
+.status-value.warn {
+  color: var(--danger);
+}
+
+.btn-full {
+  width: 100%;
+  padding: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+.btn-secondary:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+}

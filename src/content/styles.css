@@ -1,0 +1,117 @@
+/* Dehype Twitter/X Extension Styles */
+
+/* Loading Skeleton */
+.dehype-skeleton-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 6px 0;
+  pointer-events: none;
+}
+
+.dehype-skeleton-line {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    rgba(128, 128, 128, 0.15) 25%,
+    rgba(128, 128, 128, 0.3) 50%,
+    rgba(128, 128, 128, 0.15) 75%
+  );
+  background-size: 200% 100%;
+  animation: dehype-shimmer 1.5s infinite linear;
+}
+
+.dehype-skeleton-line.w-full {
+  width: 100%;
+}
+
+.dehype-skeleton-line.w-80 {
+  width: 80%;
+}
+
+.dehype-skeleton-line.w-50 {
+  width: 50%;
+}
+
+@keyframes dehype-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Badge & Controls */
+.dehype-badge-wrapper {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.dehype-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  background-color: rgba(29, 155, 240, 0.12);
+  color: rgb(29, 155, 240);
+  border: 1px solid rgba(29, 155, 240, 0.3);
+}
+
+.dehype-badge:hover {
+  background-color: rgba(29, 155, 240, 0.22);
+}
+
+.dehype-badge.showing-original {
+  background-color: rgba(128, 128, 128, 0.15);
+  color: rgb(150, 150, 150);
+  border-color: rgba(128, 128, 128, 0.3);
+}
+
+.dehype-badge.showing-original:hover {
+  background-color: rgba(128, 128, 128, 0.25);
+}
+
+.dehype-badge-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  background-color: rgba(244, 33, 46, 0.1);
+  color: rgb(244, 33, 46);
+  border: 1px solid rgba(244, 33, 46, 0.3);
+}
+
+.dehype-badge-retry:hover {
+  background-color: rgba(244, 33, 46, 0.2);
+}
+
+/* Formatted Links inside Dehyped Text */
+.dehype-entity-link {
+  color: rgb(29, 155, 240);
+  text-decoration: none;
+}
+
+.dehype-entity-link:hover {
+  text-decoration: underline;
+}
+
+/* Dehyped Content Container */
+.dehype-content-rendered {
+  line-height: 1.45;
+  word-break: break-word;
+  white-space: normal;
+}
