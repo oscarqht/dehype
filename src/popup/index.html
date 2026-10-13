@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dehype</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div class="logo-icon">✨</div>
+    <h1>Dehype for X</h1>
+  </header>
+
+  <div class="status-card">
+    <div class="status-row">
+      <span class="status-label">API Status</span>
+      <span id="apiKeyStatus" class="status-value warn">Checking...</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">Cached Posts</span>
+      <span id="cacheCount" class="status-value">-</span>
+    </div>
+  </div>
+
+  <button id="openOptionsBtn" class="btn-full btn-primary">⚙️ Open Settings</button>
+  <button id="clearCacheBtn" class="btn-full btn-secondary">🧹 Clear Cache</button>
+
+  <script type="module" src="index.js"></script>
+</body>
+</html>

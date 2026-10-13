@@ -1,0 +1,27 @@
+{
+  "name": "dehype",
+  "version": "1.0.0",
+  "description": "Browser extension to replace Twitter/X hyped posts with dehyped versions.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "twitter",
+    "x",
+    "dehype",
+    "extension",
+    "chrome",
+    "firefox"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@types/chrome": "^0.3.5",
+    "@types/node": "^26.6.5",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  }
+}
