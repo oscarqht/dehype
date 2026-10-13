@@ -1,5 +1,5 @@
 import { getCachedTweets, setCachedTweets, computeTextHash } from '../shared/cache';
-import { formatDehypedTextHtml } from '../shared/text';
+import { formatDehypedTextHtml, countWords, MIN_WORDS_TO_DEHYPE } from '../shared/text';
 import { ExtensionMessage, ExtensionResponse } from '../shared/types';
 
 interface QueuedTweet {
@@ -273,8 +273,14 @@ async function processTweet(article: HTMLElement) {
   }
 
   const rawText = primaryTextEl.innerText.trim();
-  if (!rawText || rawText.length < 5) {
-    return; // Skip empty or negligible text
+  if (!rawText) {
+    return;
+  }
+
+  // Only dehype tweets with more than 10 words (exclude short tweets)
+  if (countWords(rawText) <= MIN_WORDS_TO_DEHYPE) {
+    primaryTextEl.dataset.dehypeState = 'skipped';
+    return;
   }
 
   const tweetId = getTweetIdentifier(article, rawText);
