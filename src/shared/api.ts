@@ -1,4 +1,4 @@
-import { DehypeApiRequest, DehypeApiResponse } from './types';
+import type { DehypeApiRequest, DehypeApiResponse, DehypeResult } from './types';
 
 export const API_ENDPOINT = 'https://ai.insea.io/api/workflows/28777/run';
 export const API_KEY_STORAGE_KEY = 'dehype_api_key';
@@ -35,23 +35,23 @@ export async function setApiKey(apiKey: string): Promise<void> {
 }
 
 /**
- * Executes a batch request to the Dehype workflow API
+ * Executes a single-text request to the Dehype workflow API
  */
-export async function runDehypeBatch(
-  texts: string[],
+export async function runDehype(
+  text: string,
   overrideApiKey?: string
-): Promise<string[]> {
+): Promise<DehypeResult> {
   const apiKey = overrideApiKey || (await getApiKey());
   if (!apiKey) {
     throw new Error('API key is not configured. Please open Dehype settings to set your key.');
   }
 
-  if (!texts || texts.length === 0) {
-    return [];
+  if (!text) {
+    return { result: '', isHype: false };
   }
 
   const payload: DehypeApiRequest = {
-    texts,
+    text,
   };
 
   const response = await fetch(API_ENDPOINT, {
@@ -88,26 +88,27 @@ export async function runDehypeBatch(
   }
 
   if (workflowData.status && workflowData.status !== 'succeeded') {
-    const nodeErr = workflowData.error?.message;
+    const nodeErr =
+      workflowData.error?.message ||
+      workflowData.executed_nodes?.find((n) => n.error?.message)?.error?.message;
     throw new Error(`Workflow execution ${workflowData.status}: ${nodeErr || 'Operation could not complete'}`);
   }
 
   const outputs = workflowData.outputs;
-  if (outputs?.results && Array.isArray(outputs.results)) {
-    return outputs.results;
+  if (!outputs || (typeof outputs.result !== 'string' && typeof outputs.isHype !== 'boolean')) {
+    throw new Error('No dehyped result returned by the API');
   }
 
-  if (outputs?.result && typeof outputs.result === 'string') {
-    return [outputs.result];
-  }
+  const isHype = typeof outputs.isHype === 'boolean' ? outputs.isHype : Boolean(outputs.result);
+  const result = typeof outputs.result === 'string' ? outputs.result : text;
 
-  throw new Error('No dehyped results returned by the API');
+  return { result, isHype };
 }
 
 /**
  * Tests whether the given API key is valid by sending a test ping
  */
 export async function testApiKey(apiKey: string): Promise<boolean> {
-  const testResults = await runDehypeBatch(['This is a groundbreaking revolutionary 100x game changer!'], apiKey);
-  return Array.isArray(testResults) && testResults.length > 0;
+  const testResult = await runDehype('This is a groundbreaking revolutionary 100x game changer!', apiKey);
+  return typeof testResult.isHype === 'boolean';
 }

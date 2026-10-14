@@ -1,4 +1,4 @@
-import { runDehypeBatch, testApiKey, getApiKey, API_KEY_STORAGE_KEY } from '../shared/api';
+import { runDehype, testApiKey, getApiKey, API_KEY_STORAGE_KEY } from '../shared/api';
 import { getCacheStats, clearCache } from '../shared/cache';
 import { ExtensionMessage } from '../shared/types';
 
@@ -45,13 +45,13 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
           break;
         }
 
-        case 'DEHYPE_BATCH': {
-          if (!message.texts || !message.texts.length) {
-            sendResponse({ success: true, results: [] });
+        case 'DEHYPE_TEXT': {
+          if (!message.text) {
+            sendResponse({ success: true, data: { result: '', isHype: false } });
             return;
           }
-          const results = await runDehypeBatch(message.texts);
-          sendResponse({ success: true, results });
+          const data = await runDehype(message.text);
+          sendResponse({ success: true, data });
           break;
         }
 

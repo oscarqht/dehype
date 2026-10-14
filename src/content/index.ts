@@ -2,18 +2,6 @@ import { getCachedTweets, setCachedTweets, computeTextHash } from '../shared/cac
 import { formatDehypedTextHtml, countWords, MIN_WORDS_TO_DEHYPE } from '../shared/text';
 import { ExtensionMessage, ExtensionResponse } from '../shared/types';
 
-interface QueuedTweet {
-  tweetId: string;
-  rawText: string;
-  textEl: HTMLElement;
-  originalHtml: string;
-}
-
-const DEBOUNCE_DELAY_MS = 500;
-const MAX_BATCH_SIZE = 20;
-
-let pendingQueue: QueuedTweet[] = [];
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 const inFlightTweetIds = new Set<string>();
 let isApiKeyConfigured: boolean | null = null;
 
@@ -156,72 +144,9 @@ function applyFailedContent(
 }
 
 /**
- * Flushes pending tweet queue and sends batch request to background service worker
+ * Sends a single tweet to background service worker for dehyping
  */
-async function flushPendingBatch() {
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
-  }
-
-  if (!pendingQueue.length) return;
-
-  const currentBatch = pendingQueue.splice(0, MAX_BATCH_SIZE);
-  const texts = currentBatch.map((item) => item.rawText);
-
-  try {
-    const response = (await chrome.runtime.sendMessage({
-      type: 'DEHYPE_BATCH',
-      texts,
-    } as ExtensionMessage)) as ExtensionResponse;
-
-    if (response && response.success && 'results' in response && Array.isArray(response.results)) {
-      const results = response.results;
-      const cacheEntriesToSave: Array<{ key: string; originalText: string; dehypedText: string }> = [];
-
-      currentBatch.forEach((item, index) => {
-        inFlightTweetIds.delete(item.tweetId);
-        const dehypedText = results[index] || item.rawText;
-        applyDehypedContent(item.textEl, item.originalHtml, dehypedText);
-        cacheEntriesToSave.push({
-          key: item.tweetId,
-          originalText: item.rawText,
-          dehypedText,
-        });
-      });
-
-      // Save to 500-item LRU cache
-      await setCachedTweets(cacheEntriesToSave);
-    } else {
-      const errMsg = (!response?.success && response?.error) || 'API error';
-      console.warn('[Dehype] Batch failed:', errMsg);
-      currentBatch.forEach((item) => {
-        inFlightTweetIds.delete(item.tweetId);
-        applyFailedContent(item.textEl, item.originalHtml, () => {
-          enqueueTweet(item.tweetId, item.rawText, item.textEl, item.originalHtml);
-        });
-      });
-    }
-  } catch (err) {
-    console.error('[Dehype] Network/Worker error during batch:', err);
-    currentBatch.forEach((item) => {
-      inFlightTweetIds.delete(item.tweetId);
-      applyFailedContent(item.textEl, item.originalHtml, () => {
-        enqueueTweet(item.tweetId, item.rawText, item.textEl, item.originalHtml);
-      });
-    });
-  }
-
-  // If there are remaining items in queue, schedule next flush
-  if (pendingQueue.length > 0) {
-    debounceTimer = setTimeout(flushPendingBatch, DEBOUNCE_DELAY_MS);
-  }
-}
-
-/**
- * Enqueues a tweet for batch processing
- */
-function enqueueTweet(
+async function dehypeTweet(
   tweetId: string,
   rawText: string,
   textEl: HTMLElement,
@@ -235,18 +160,47 @@ function enqueueTweet(
   textEl.innerHTML = '';
   textEl.appendChild(createSkeleton());
 
-  pendingQueue.push({
-    tweetId,
-    rawText,
-    textEl,
-    originalHtml,
-  });
+  try {
+    const response = (await chrome.runtime.sendMessage({
+      type: 'DEHYPE_TEXT',
+      text: rawText,
+    } as ExtensionMessage)) as ExtensionResponse;
 
-  if (pendingQueue.length >= MAX_BATCH_SIZE) {
-    flushPendingBatch();
-  } else {
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(flushPendingBatch, DEBOUNCE_DELAY_MS);
+    if (response && response.success && 'data' in response && response.data) {
+      inFlightTweetIds.delete(tweetId);
+      const { result, isHype } = response.data;
+      const dehypedText = result || rawText;
+
+      if (isHype && result) {
+        applyDehypedContent(textEl, originalHtml, dehypedText);
+      } else {
+        textEl.innerHTML = originalHtml;
+        textEl.dataset.dehypeState = 'done';
+      }
+
+      // Save to 500-item LRU cache
+      await setCachedTweets([
+        {
+          key: tweetId,
+          originalText: rawText,
+          dehypedText,
+          isHype: Boolean(isHype && result),
+        },
+      ]);
+    } else {
+      const errMsg = (!response?.success && response?.error) || 'API error';
+      console.warn('[Dehype] Request failed:', errMsg);
+      inFlightTweetIds.delete(tweetId);
+      applyFailedContent(textEl, originalHtml, () => {
+        dehypeTweet(tweetId, rawText, textEl, originalHtml);
+      });
+    }
+  } catch (err) {
+    console.error('[Dehype] Network/Worker error:', err);
+    inFlightTweetIds.delete(tweetId);
+    applyFailedContent(textEl, originalHtml, () => {
+      dehypeTweet(tweetId, rawText, textEl, originalHtml);
+    });
   }
 }
 
@@ -284,25 +238,35 @@ async function processTweet(article: HTMLElement) {
   }
 
   const tweetId = getTweetIdentifier(article, rawText);
+  if (inFlightTweetIds.has(tweetId)) {
+    return;
+  }
+
+  const originalHtml = primaryTextEl.innerHTML;
 
   // Check LRU Cache first
   const cached = await getCachedTweets([tweetId]);
+  if (primaryTextEl.dataset.dehypeState) {
+    return;
+  }
   if (cached.has(tweetId)) {
-    const dehyped = cached.get(tweetId)!;
-    const originalHtml = primaryTextEl.innerHTML;
-    applyDehypedContent(primaryTextEl, originalHtml, dehyped);
+    const entry = cached.get(tweetId)!;
+    if (entry.isHype === false) {
+      primaryTextEl.dataset.dehypeState = 'done';
+      return;
+    }
+    applyDehypedContent(primaryTextEl, originalHtml, entry.dehypedText);
     return;
   }
 
   // If not cached, verify API key before modifying DOM
   const hasKey = await checkApiKeyConfigured();
-  if (!hasKey) {
+  if (!hasKey || primaryTextEl.dataset.dehypeState) {
     // Leave tweet untouched if user hasn't configured an API key
     return;
   }
 
-  const originalHtml = primaryTextEl.innerHTML;
-  enqueueTweet(tweetId, rawText, primaryTextEl, originalHtml);
+  dehypeTweet(tweetId, rawText, primaryTextEl, originalHtml);
 }
 
 /**
