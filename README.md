@@ -11,8 +11,8 @@ A cross-browser extension (for **Google Chrome** and **Mozilla Firefox**) that r
 - **Automatic Timeline Dehyping**: Automatically detects top-level tweets as you scroll down your timeline on `x.com` and `twitter.com`.
 - **Loading Skeleton UI**: Replaces the original tweet text with an animated shimmer skeleton while awaiting the API response.
 - **Top-Level Tweets Only**: Targets main tweets and intentionally ignores nested quote tweet cards.
-- **Debounced Batching**: Collects tweets into batches (up to 20 tweets per request, debounced over 500ms) to conserve tokens and minimize latency.
-- **500-Item LRU Cache**: Automatically stores the 500 most recently dehyped tweets in `chrome.storage.local`. Re-visiting the same tweets retrieves the dehyped text instantly without sending any API requests.
+- **Per-Tweet Dehyping**: Sends one API request per tweet so each post updates independently as soon as its response arrives.
+- **500-Item LRU Cache**: Automatically stores the 500 most recently processed tweets in `chrome.storage.local`. Re-visiting the same tweets retrieves the result instantly without sending any API requests.
 - **Original vs Dehyped Toggle**: Every dehyped tweet features a subtle `✨ Dehyped` badge. Clicking it toggles between the original text (`↩ Original`) and the dehyped text.
 - **Rich Text Preservation**: Automatically formats line breaks and linkifies URLs, `@mentions`, and `#hashtags`.
 - **Graceful Error Recovery**: If the API call fails or encounters network errors, the tweet reverts to its original content with an unobtrusive retry button (`⚠️ Dehype failed · Click to retry`).
@@ -75,16 +75,21 @@ The extension communicates with:
 - **Payload**:
   ```json
   {
-    "texts": ["Tweet content 1", "Tweet content 2", ...]
+    "text": "Tweet content"
   }
   ```
 - **Response**:
   ```json
   {
+    "request_id": "req_123456",
     "data": {
       "status": "succeeded",
+      "inputs": {
+        "text": "Tweet content"
+      },
       "outputs": {
-        "results": ["Dehyped tweet 1", "Dehyped tweet 2", ...]
+        "result": "Dehyped tweet",
+        "isHype": true
       }
     }
   }

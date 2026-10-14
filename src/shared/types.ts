@@ -2,6 +2,7 @@ export interface CacheEntry {
   id: string; // tweet ID or fallback hash
   originalText: string;
   dehypedText: string;
+  isHype?: boolean;
   timestamp: number;
 }
 
@@ -11,8 +12,26 @@ export interface CacheStore {
 }
 
 export interface DehypeApiRequest {
-  text?: string;
-  texts: string[];
+  text: string;
+}
+
+export interface DehypeResult {
+  result: string;
+  isHype: boolean;
+}
+
+export interface DehypeApiNodeExecution {
+  id: string;
+  status: string;
+  duration_ms?: number;
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+  };
+  error?: {
+    code?: string;
+    message?: string;
+  };
 }
 
 export interface DehypeApiResponse {
@@ -21,11 +40,19 @@ export interface DehypeApiResponse {
     status?: string;
     inputs?: {
       text?: string;
-      texts?: string[] | null;
     };
     outputs?: {
       result?: string;
-      results?: string[];
+      isHype?: boolean;
+    };
+    attachment_ids?: string[];
+    executed_nodes?: DehypeApiNodeExecution[];
+    elapsed_time_ms?: number;
+    started_at?: number;
+    finished_at?: number;
+    usage?: {
+      input_tokens: number;
+      output_tokens: number;
     };
     error?: {
       code?: string;
@@ -40,14 +67,14 @@ export interface DehypeApiResponse {
 
 export type ExtensionMessage =
   | { type: 'CHECK_API_KEY' }
-  | { type: 'DEHYPE_BATCH'; texts: string[] }
+  | { type: 'DEHYPE_TEXT'; text: string }
   | { type: 'TEST_API_KEY'; apiKey: string }
   | { type: 'GET_CACHE_STATS' }
   | { type: 'CLEAR_CACHE' };
 
 export type ExtensionResponse =
   | { success: true; apiKeyConfigured: boolean }
-  | { success: true; results: string[] }
+  | { success: true; data: DehypeResult }
   | { success: true; stats: { count: number; maxSize: number } }
   | { success: true; message?: string }
   | { success: false; error: string; details?: unknown };

@@ -37,37 +37,47 @@ async function saveRawStore(store: CacheStore): Promise<void> {
   }
 }
 
+let cacheOpQueue: Promise<unknown> = Promise.resolve();
+
+function enqueueCacheOp<T>(fn: () => Promise<T>): Promise<T> {
+  const next = cacheOpQueue.then(fn, fn);
+  cacheOpQueue = next.catch(() => {});
+  return next;
+}
+
 /**
- * Retrieves cached dehyped text for the given keys.
+ * Retrieves cached entries for the given keys.
  * Updates LRU order for retrieved items.
  */
-export async function getCachedTweets(keys: string[]): Promise<Map<string, string>> {
-  const hits = new Map<string, string>();
+export async function getCachedTweets(keys: string[]): Promise<Map<string, CacheEntry>> {
+  const hits = new Map<string, CacheEntry>();
   if (!keys.length) return hits;
 
-  const store = await getRawStore();
-  let updated = false;
+  return enqueueCacheOp(async () => {
+    const store = await getRawStore();
+    let updated = false;
 
-  for (const key of keys) {
-    const entry = store.entries[key];
-    if (entry) {
-      hits.set(key, entry.dehypedText);
-      // Move key to the end of LRU order
-      const idx = store.order.indexOf(key);
-      if (idx !== -1) {
-        store.order.splice(idx, 1);
+    for (const key of keys) {
+      const entry = store.entries[key];
+      if (entry) {
+        hits.set(key, entry);
+        // Move key to the end of LRU order
+        const idx = store.order.indexOf(key);
+        if (idx !== -1) {
+          store.order.splice(idx, 1);
+        }
+        store.order.push(key);
+        entry.timestamp = Date.now();
+        updated = true;
       }
-      store.order.push(key);
-      entry.timestamp = Date.now();
-      updated = true;
     }
-  }
 
-  if (updated) {
-    await saveRawStore(store);
-  }
+    if (updated) {
+      await saveRawStore(store);
+    }
 
-  return hits;
+    return hits;
+  });
 }
 
 /**
@@ -75,37 +85,40 @@ export async function getCachedTweets(keys: string[]): Promise<Map<string, strin
  * Evicts oldest items if cache exceeds MAX_CACHE_SIZE.
  */
 export async function setCachedTweets(
-  items: Array<{ key: string; originalText: string; dehypedText: string }>
+  items: Array<{ key: string; originalText: string; dehypedText: string; isHype?: boolean }>
 ): Promise<void> {
   if (!items.length) return;
 
-  const store = await getRawStore();
-  const now = Date.now();
+  return enqueueCacheOp(async () => {
+    const store = await getRawStore();
+    const now = Date.now();
 
-  for (const item of items) {
-    const existingIdx = store.order.indexOf(item.key);
-    if (existingIdx !== -1) {
-      store.order.splice(existingIdx, 1);
+    for (const item of items) {
+      const existingIdx = store.order.indexOf(item.key);
+      if (existingIdx !== -1) {
+        store.order.splice(existingIdx, 1);
+      }
+
+      store.entries[item.key] = {
+        id: item.key,
+        originalText: item.originalText,
+        dehypedText: item.dehypedText,
+        isHype: item.isHype,
+        timestamp: now,
+      };
+      store.order.push(item.key);
     }
 
-    store.entries[item.key] = {
-      id: item.key,
-      originalText: item.originalText,
-      dehypedText: item.dehypedText,
-      timestamp: now,
-    };
-    store.order.push(item.key);
-  }
-
-  // Evict oldest entries if capacity exceeded
-  while (store.order.length > MAX_CACHE_SIZE) {
-    const oldestKey = store.order.shift();
-    if (oldestKey && store.entries[oldestKey]) {
-      delete store.entries[oldestKey];
+    // Evict oldest entries if capacity exceeded
+    while (store.order.length > MAX_CACHE_SIZE) {
+      const oldestKey = store.order.shift();
+      if (oldestKey && store.entries[oldestKey]) {
+        delete store.entries[oldestKey];
+      }
     }
-  }
 
-  await saveRawStore(store);
+    await saveRawStore(store);
+  });
 }
 
 /**
